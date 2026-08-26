@@ -1,0 +1,6 @@
+content devtools devtools/content/
+content devtools-jsonview-styles devtools/modules/devtools/client/jsonview/css/ contentaccessible=yes
+resource devtools devtools/modules/devtools/
+resource devtools-highlighter-styles resource://devtools/server/actors/highlighters/css/ contentaccessible=yes
+resource devtools-shared-images resource://devtools/shared/images/ contentaccessible=true
+skin devtools classic/1.0 devtools/skin/

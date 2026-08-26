@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+
+
+<html>
+  <head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src chrome:; object-src 'none'" />
+    <meta charset="UTF-8">
+    <meta name="color-scheme" content="light dark">
+    <meta name="viewport" content="width=device-width; user-scalable=false;">
+    <title>Build Configuration</title>
+    <link rel="stylesheet" href="chrome://global/skin/in-content/info-pages.css" type="text/css">
+    <link rel="stylesheet" href="chrome://global/content/buildconfig.css" type="text/css">
+  </head>
+  <body>
+    <div class="container">
+      <h1>Build Configuration</h1>
+      <p>Please be aware that this page doesn't reflect all the options used to build K-9 Desktop.</p>
+      <h2>Build platform</h2>
+      <table class="build-platform-table">
+        <tbody>
+          <tr>
+            <th>target</th>
+          </tr>
+          <tr>
+            <td>x86_64-pc-linux-gnu</td>
+          </tr>
+        </tbody>
+      </table>
+      <h2>Build tools</h2>
+      <table>
+        <tbody>
+          <tr>
+            <th>Compiler</th>
+            <th>Version</th>
+            <th>Compiler flags</th>
+          </tr>
+          <tr>
+            <td>/usr/lib/llvm/bin/clang</td>
+            <td>20.1.5</td>
+            <td>-pthread -ffunction-sections -fdata-sections -fno-math-errno -fPIC</td>
+          </tr>
+          <tr>
+            <td>/usr/lib/llvm/bin/clang++</td>
+            <td>20.1.5</td>
+            <td>-fno-rtti -pthread -fno-sized-deallocation -fno-aligned-new -ffunction-sections -fdata-sections -fno-math-errno -fno-exceptions -fPIC -O2 -fomit-frame-pointer -funwind-tables</td>
+          </tr>
+          <tr>
+            <td>/usr/bin/rustc</td>
+            <td>1.98.0</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <h2>Configure options</h2>
+      <p>--enable-application=comm/mail --disable-tests --enable-optimize=-O2 --disable-debug-symbols --without-wasm-sandboxed-libraries --disable-updater --enable-official-branding --disable-crashreporter</p>
+    </div>
+  </body>
+</html>
