@@ -45,7 +45,7 @@ cd "$STAGE"
 [ -f thunderbird-bin ] && mv -f thunderbird-bin k9-bin
 
 # sanitize absolute home paths
-grep -rl "/home/natalie" . 2>/dev/null | while read -r f; do
+for f in $(grep -rl "/home/natalie" . 2>/dev/null || true); do
   sed -i 's#/home/natalie#/home/user#g' "$f"
 done
 
