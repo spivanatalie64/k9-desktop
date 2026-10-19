@@ -26,6 +26,7 @@ jobs:
           git config --global user.email "k9-desktop@acreetionos.org"
           git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" .
           git lfs install
+          cd /github/workspace
           git lfs pull
 
       - name: Run autobuild
