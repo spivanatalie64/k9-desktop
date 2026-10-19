@@ -37,7 +37,10 @@ echo "Created deb"
 if command -v rpmbuild >/dev/null 2>&1; then
   RPMBUILD="$WORK/rpmbuild"
   mkdir -p "$RPMBUILD"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-  tar -czf "$RPMBUILD/SOURCES/k9-desktop-${VER}.tar.gz" -C "$REPO" "${EXCLUDES[@]}" .
+  mkdir -p "$WORK/k9-desktop-${VER}"
+  cp -a "$REPO"/. "$WORK/k9-desktop-${VER}/"
+  rm -rf "$WORK/k9-desktop-${VER}/.git" "$WORK/k9-desktop-${VER}/.github" "$WORK/k9-desktop-${VER}/scripts" "$WORK/k9-desktop-${VER}/dist"
+  tar -czf "$RPMBUILD/SOURCES/k9-desktop-${VER}.tar.gz" -C "$WORK" "k9-desktop-${VER}"
   cat > "$RPMBUILD/SPECS/k9-desktop.spec" <<EOF
 Name: k9-desktop
 Version: ${VER}
@@ -45,12 +48,13 @@ Release: 1
 Summary: K9Desktop mail client based on Mozilla Thunderbird LTS
 License: MPL-2.0
 BuildArch: x86_64
+Source0: k9-desktop-${VER}.tar.gz
 
 %description
 K9Desktop mail client based on Mozilla Thunderbird LTS.
 
 %prep
-%setup -q -n k9-desktop-${VER} 2>/dev/null || true
+%setup -q
 
 %install
 mkdir -p %{buildroot}/opt/k9-desktop
@@ -63,9 +67,7 @@ cp -a . %{buildroot}/opt/k9-desktop/
 * $(date '+%a %b %d %Y') AcreetionOS <k9-desktop@acreetionos.org> - ${VER}-1
 - Autobuild based on Mozilla Thunderbird LTS
 EOF
-  # rpmbuild expects source dir name; adjust by extracting
-  (cd "$RPMBUILD/BUILD" && tar -xzf "$RPMBUILD/SOURCES/k9-desktop-${VER}.tar.gz" -C . 2>/dev/null || mkdir -p "k9-desktop-${VER}")
-  rpmbuild --define "_topdir $RPMBUILD" -bb "$RPMBUILD/SPECS/k9-desktop.spec" || true
+  rpmbuild --define "_topdir $RPMBUILD" -bb "$RPMBUILD/SPECS/k9-desktop.spec"
   find "$RPMBUILD/RPMS" -name '*.rpm' -exec cp {} "$DIST/" \;
   echo "Created rpm (if rpmbuild succeeded)"
 else
