@@ -24,11 +24,9 @@ jobs:
         run: |
           git config --global user.name "k9-desktop"
           git config --global user.email "k9-desktop@acreetionos.org"
+          git config --global --add safe.directory '*'
           git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" .
           git lfs install
-          pwd
-          ls -la
-          git status
           git lfs pull
 
       - name: Run autobuild
