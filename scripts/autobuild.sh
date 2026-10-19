@@ -84,7 +84,7 @@ EOF
 
 # Copy stage into repo root (overwrite)
 REPO="${GITHUB_WORKSPACE:-/home/natalie/.ai/.src/k9-desktop}"
-rsync -a --delete --exclude='.git' "$STAGE/" "$REPO/"
+rsync -a --delete --exclude='.git' --exclude='.github' --exclude='scripts' "$STAGE/" "$REPO/"
 
 cd "$REPO"
 
