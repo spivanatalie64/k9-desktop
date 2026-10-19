@@ -11,24 +11,22 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: archlinux:latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install git-lfs
+      - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y git-lfs rsync curl python3
+          pacman -Sy --noconfirm
+          pacman -S --noconfirm --needed git git-lfs curl python rsync tar xz zstd binutils dpkg rpm
+
+      - name: Checkout (no Node-based actions)
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "k9-desktop"
+          git config --global user.email "k9-desktop@acreetionos.org"
+          git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" .
           git lfs install
-
-      - name: Configure git
-        run: |
-          git config user.name "k9-desktop"
-          git config user.email "k9-desktop@acreetionos.org"
+          git lfs pull
 
       - name: Run autobuild
         env:
@@ -37,14 +35,25 @@ jobs:
           chmod +x scripts/autobuild.sh
           ./scripts/autobuild.sh
 
-      - name: Create GitHub release
+      - name: Package (deb, rpm, arch)
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        run: |
+          chmod +x scripts/package.sh
+          ./scripts/package.sh
+
+      - name: Create GitHub release with artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          pacman -S --noconfirm --needed github-cli
           ESR=$(curl -s https://product-details.mozilla.org/1.0/thunderbird_versions.json | python3 -c "import sys,json; print(json.load(sys.stdin)['THUNDERBIRD_ESR'])")
           VER="${ESR%esr}"
           if gh release view "v${VER}" >/dev/null 2>&1; then
-            echo "Release already exists"
+            echo "Release already exists; uploading assets"
           else
-            gh release create "v${VER}" --title "K9Desktop ${VER}" --notes "Autobuild based on Mozilla Thunderbird LTS ${ESR}. Sanitized build; no Betterbird-style in-product advertisements."
+            gh release create "v${VER}" --title "K9Desktop ${VER}" --notes "Autobuild based on Mozilla Thunderbird LTS ${ESR}. Packaged as deb, rpm, and Arch tarball."
           fi
+          for f in dist/*; do
+            [ -e "$f" ] && gh release upload "v${VER}" "$f" --clobber
+          done
