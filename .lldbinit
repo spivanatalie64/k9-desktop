@@ -1,4 +1,0 @@
-script ignore__see_bug_1605268 = True
-
-script topsrcdir = "/usr/lib/k9-desktop"; lldb.debugger.HandleCommand("command source -s true '%s'" % os.path.join(topsrcdir, ".lldbinit"))
-
