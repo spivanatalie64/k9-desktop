@@ -11,9 +11,20 @@ trap 'rm -rf "$WORK"' EXIT
 
 EXCLUDES=(--exclude=.git --exclude=.github --exclude=scripts --exclude=dist)
 
-# --- Arch Linux tarball (.pkg.tar.zst) ---
-tar --zstd -cf "$DIST/k9-desktop-${VER}-x86_64.pkg.tar.zst" -C "$REPO" "${EXCLUDES[@]}" .
-echo "Created Arch tarball"
+# --- Arch Linux package (.pkg.tar.zst) ---
+ARCHSTAGE="$WORK/arch"
+mkdir -p "$ARCHSTAGE"
+cp -a "$REPO"/. "$ARCHSTAGE/"
+rm -rf "$ARCHSTAGE/.git" "$ARCHSTAGE/.github" "$ARCHSTAGE/scripts" "$ARCHSTAGE/dist"
+cat > "$ARCHSTAGE/.PKGINFO" <<EOF
+pkgname = k9-desktop
+pkgver = ${VER}-1
+pkgdesc = K9Desktop mail client based on Mozilla Thunderbird LTS
+arch = x86_64
+license = MPL-2.0
+EOF
+tar --zstd -cf "$DIST/k9-desktop-${VER}-x86_64.pkg.tar.zst" -C "$ARCHSTAGE" .
+echo "Created Arch package"
 
 # --- Debian package (.deb) ---
 DEB="$WORK/k9-desktop_${VER}_amd64"
