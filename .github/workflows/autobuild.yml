@@ -1,0 +1,50 @@
+name: K9Desktop Autobuild
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"   # weekly, free GitHub Actions tier
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install git-lfs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-lfs rsync curl python3
+          git lfs install
+
+      - name: Configure git
+        run: |
+          git config user.name "k9-desktop"
+          git config user.email "k9-desktop@acreetionos.org"
+
+      - name: Run autobuild
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        run: |
+          chmod +x scripts/autobuild.sh
+          ./scripts/autobuild.sh
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ESR=$(curl -s https://product-details.mozilla.org/1.0/thunderbird_versions.json | python3 -c "import sys,json; print(json.load(sys.stdin)['THUNDERBIRD_ESR'])")
+          VER="${ESR%esr}"
+          if gh release view "v${VER}" >/dev/null 2>&1; then
+            echo "Release already exists"
+          else
+            gh release create "v${VER}" --title "K9Desktop ${VER}" --notes "Autobuild based on Mozilla Thunderbird LTS ${ESR}. Sanitized build; no Betterbird-style in-product advertisements."
+          fi
