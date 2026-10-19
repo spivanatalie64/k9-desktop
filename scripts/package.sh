@@ -49,6 +49,7 @@ Summary: K9Desktop mail client based on Mozilla Thunderbird LTS
 License: MPL-2.0
 BuildArch: x86_64
 Source0: k9-desktop-${VER}.tar.gz
+%global debug_package %{nil}
 
 %description
 K9Desktop mail client based on Mozilla Thunderbird LTS.
