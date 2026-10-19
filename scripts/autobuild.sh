@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "ERROR: command failed at line $LINENO (exit $?)" >&2' ERR
 
 # Determine latest Thunderbird ESR version
 ESR=$(curl -s https://product-details.mozilla.org/1.0/thunderbird_versions.json \
@@ -21,7 +22,7 @@ cd "$WORK"
 # Download and extract the ESR tarball
 URL="https://ftp.mozilla.org/pub/thunderbird/releases/${ESR}/linux-x86_64/en-US/thunderbird-${ESR}.tar.xz"
 echo "Downloading $URL"
-curl -sL -o thunderbird.tar.xz "$URL"
+curl -fL --progress-bar -o thunderbird.tar.xz "$URL"
 tar -xJf thunderbird.tar.xz
 
 # Move contents to repo root layout
