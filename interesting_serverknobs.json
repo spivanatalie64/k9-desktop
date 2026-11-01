@@ -6203,6 +6203,7 @@
     "web_app.usage_time": true,
     "web_notification.insecure_context_permission_request": true,
     "web_notification.permission_origin": true,
+    "web_notification.push_subscribe_origin": true,
     "web_notification.request_permission_origin": true,
     "web_notification.show_origin": true,
     "web_notification.show_safe_browsing_block": true,
