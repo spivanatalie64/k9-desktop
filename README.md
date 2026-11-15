@@ -1,6 +1,6 @@
 # K9Desktop
 
-K9Desktop is a mail client based on Mozilla Thunderbird LTS, rebranded for AcreetionOS.
+K9Desktop is a privacy-first mail client based on Mozilla Thunderbird LTS, rebranded and de-telemetered for AcreetionOS — the desktop counterpart to K-9 Mail on mobile. The goal is the same as K-9 Mail's relationship to Thunderbird mobile: take the upstream client, strip telemetry and data collection, and ship a client that respects user sovereignty.
 
 ## What this repository contains
 
@@ -27,7 +27,9 @@ Each package installs the application under `/opt/k9-desktop` (deb/rpm) or the s
 - `/usr/bin/k9` launcher symlink
 - `.desktop` entry and icons under `/usr/share`
 
-## Building locally
+## Privacy
+
+K9Desktop disables telemetry and data reporting by default via `defaults/pref/k9-privacy.js` (telemetry, unified telemetry, health reports, Shield studies, discovery). The autobuild injects this file on every release.
 
 ```bash
 git lfs pull
