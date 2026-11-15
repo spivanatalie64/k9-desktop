@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           pacman -Sy --noconfirm
-          pacman -S --noconfirm --needed git git-lfs curl python rsync tar xz zstd binutils dpkg rpm rpm-tools squashfs-tools flatpak flatpak-builder zip imagemagick
+          pacman -S --noconfirm --needed git git-lfs curl python rsync tar xz zstd binutils dpkg rpm rpm-tools squashfs-tools flatpak flatpak-builder zip imagemagick diffutils
 
       - name: Checkout (no Node-based actions)
         env:
