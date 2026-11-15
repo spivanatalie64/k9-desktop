@@ -10,6 +10,67 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 BUILD_DATE="$(date +%s)"
+
+rebrand_omni() {
+  local omni="$1"
+  [ -f "$omni" ] || return 0
+  # skip LFS pointer
+  if head -c 100 "$omni" | grep -q "git-lfs"; then return 0; fi
+  if ! command -v zip >/dev/null 2>&1; then return 0; fi
+  local tmp
+  tmp="$(mktemp -d)"
+  bsdtar -xf "$omni" -C "$tmp" 2>/dev/null || { rm -rf "$tmp"; return 0; }
+  if [ -f "$tmp/chrome/en-US/locale/branding/brand.properties" ]; then
+    cat > "$tmp/chrome/en-US/locale/branding/brand.properties" <<'BRAND'
+brandShortName=K9Desktop
+brandShorterName=K9Desktop
+brandFullName=K9Desktop
+vendorShortName=AcreetionOS
+BRAND
+  fi
+  if [ -f "$tmp/localization/en-US/branding/brand.ftl" ]; then
+    cat > "$tmp/localization/en-US/branding/brand.ftl" <<'BRANDFTL'
+-brand-shorter-name = K9Desktop
+-brand-short-name = K9Desktop
+-brand-full-name = K9Desktop
+-brand-product-name = K9Desktop
+-vendor-short-name = AcreetionOS
+trademarkInfo = K9Desktop is a de-telemetered build of Mozilla Thunderbird for AcreetionOS.
+BRANDFTL
+  fi
+  if [ -f "$tmp/defaults/pref/thunderbird-branding.js" ]; then
+    cat > "$tmp/defaults/pref/thunderbird-branding.js" <<'BRANDJS'
+// K9Desktop branding (replaces thunderbird-branding.js)
+pref("mailnews.start_page.url", "https://acreetionos.org/");
+pref("app.vendorURL", "https://acreetionos.org/");
+pref("mail.inappnotifications.url", "");
+pref("app.update.url.manual", "https://github.com/spivanatalie64/k9-desktop/releases");
+pref("app.update.url.details", "https://github.com/spivanatalie64/k9-desktop/releases");
+BRANDJS
+  fi
+  for s in 32 48 64 128 256; do
+    if [ -f "$REPO/chrome/icons/default/default${s}.png" ] && [ -f "$tmp/chrome/messenger/content/branding/icon${s}.png" ]; then
+      cp -f "$REPO/chrome/icons/default/default${s}.png" "$tmp/chrome/messenger/content/branding/icon${s}.png"
+    fi
+  done
+  if [ -f "$REPO/chrome/icons/default/default256.png" ]; then
+    for f in "$tmp/chrome/messenger/content/branding/about-logo.png" "$tmp/chrome/messenger/content/branding/about.png"; do
+      [ -f "$f" ] && cp -f "$REPO/chrome/icons/default/default256.png" "$f"
+    done
+    if [ -f "$tmp/chrome/messenger/content/branding/about-logo@2x.png" ] && command -v magick >/dev/null 2>&1; then
+      magick "$REPO/chrome/icons/default/default256.png" -resize 512x512 "$tmp/chrome/messenger/content/branding/about-logo@2x.png" 2>/dev/null || cp -f "$REPO/chrome/icons/default/default256.png" "$tmp/chrome/messenger/content/branding/about-logo@2x.png"
+    fi
+  fi
+  if [ -f "$tmp/modules/OAuth2Providers.sys.mjs" ]; then
+    sed -i 's/useExternalBrowser: true/useExternalBrowser: false/g' "$tmp/modules/OAuth2Providers.sys.mjs" || true
+  fi
+  local out
+  out="$(mktemp)"
+  (cd "$tmp" && zip -qr -0 "$out" .)
+  cat "$out" > "$omni"
+  rm -rf "$tmp" "$out"
+}
+
 DESKTOP_FILE='[Desktop Entry]
 Name=K9Desktop
 Comment=K9Desktop mail client based on Mozilla Thunderbird LTS
@@ -28,6 +89,7 @@ mkdir -p "$ARCHSTAGE/opt/k9-desktop"
 cp -a "$REPO"/. "$ARCHSTAGE/opt/k9-desktop/"
 rm -rf "$ARCHSTAGE/opt/k9-desktop/.git" "$ARCHSTAGE/opt/k9-desktop/.github" "$ARCHSTAGE/opt/k9-desktop/scripts" "$ARCHSTAGE/opt/k9-desktop/dist"
 rm -f "$ARCHSTAGE/opt/k9-desktop/pingsender" "$ARCHSTAGE/opt/k9-desktop/crashreporter" "$ARCHSTAGE/opt/k9-desktop/crashhelper"
+rebrand_omni "$ARCHSTAGE/opt/k9-desktop/omni.ja"
 
 ARCH_SIZE="$(find "$ARCHSTAGE" -type f ! -name .PKGINFO ! -name .BUILDINFO ! -name .MTREE -printf '%s\n' | awk '{s+=$1} END {print s+0}')"
 
@@ -87,6 +149,7 @@ mkdir -p "$DEB/DEBIAN" "$DEB/opt/k9-desktop"
 cp -a "$REPO"/. "$DEB/opt/k9-desktop/"
 rm -rf "$DEB/opt/k9-desktop/.git" "$DEB/opt/k9-desktop/.github" "$DEB/opt/k9-desktop/scripts" "$DEB/opt/k9-desktop/dist"
 rm -f "$DEB/opt/k9-desktop/pingsender" "$DEB/opt/k9-desktop/crashreporter" "$DEB/opt/k9-desktop/crashhelper"
+rebrand_omni "$DEB/opt/k9-desktop/omni.ja"
 
 DEB_SIZE_KB=0
 while IFS= read -r -d '' obj; do
@@ -132,6 +195,7 @@ if command -v rpmbuild >/dev/null 2>&1; then
   cp -a "$REPO"/. "$WORK/k9-desktop-${VER}/"
   rm -rf "$WORK/k9-desktop-${VER}/.git" "$WORK/k9-desktop-${VER}/.github" "$WORK/k9-desktop-${VER}/scripts" "$WORK/k9-desktop-${VER}/dist"
   rm -f "$WORK/k9-desktop-${VER}/pingsender" "$WORK/k9-desktop-${VER}/crashreporter" "$WORK/k9-desktop-${VER}/crashhelper"
+  rebrand_omni "$WORK/k9-desktop-${VER}/omni.ja"
   tar -czf "$RPMBUILD/SOURCES/k9-desktop-${VER}.tar.gz" -C "$WORK" "k9-desktop-${VER}"
   cat > "$RPMBUILD/SPECS/k9-desktop.spec" <<EOF
 Name: k9-desktop
@@ -185,6 +249,7 @@ mkdir -p "$SNAP/meta/gui"
 cp -a "$REPO"/. "$SNAP/"
 rm -rf "$SNAP/.git" "$SNAP/.github" "$SNAP/scripts" "$SNAP/dist"
 rm -f "$SNAP/pingsender" "$SNAP/crashreporter" "$SNAP/crashhelper"
+rebrand_omni "$SNAP/omni.ja"
 mkdir -p "$SNAP/meta/gui"
 cp -f "$REPO/chrome/icons/default/default256.png" "$SNAP/meta/gui/icon.png"
 cat > "$SNAP/meta/gui/k9-desktop.desktop" <<EOF
@@ -231,6 +296,7 @@ rm -rf "$APPDIR/usr/lib/k9-desktop/.git" "$APPDIR/usr/lib/k9-desktop/.github" \
        "$APPDIR/usr/lib/k9-desktop/scripts" "$APPDIR/usr/lib/k9-desktop/dist"
 rm -f "$APPDIR/usr/lib/k9-desktop/pingsender" "$APPDIR/usr/lib/k9-desktop/crashreporter" \
       "$APPDIR/usr/lib/k9-desktop/crashhelper"
+rebrand_omni "$APPDIR/usr/lib/k9-desktop/omni.ja"
 ln -sfn ../lib/k9-desktop/k9 "$APPDIR/usr/bin/k9"
 cp -f "$REPO/chrome/icons/default/default256.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/k9-desktop.png"
 cp -f "$REPO/chrome/icons/default/TB-symbolic.svg" "$APPDIR/usr/share/icons/hicolor/scalable/apps/k9-desktop.svg" 2>/dev/null || true
@@ -267,6 +333,7 @@ mkdir -p "$FLATPAK_STAGE"
 cp -a "$REPO"/. "$FLATPAK_STAGE/"
 rm -rf "$FLATPAK_STAGE/.git" "$FLATPAK_STAGE/.github" "$FLATPAK_STAGE/scripts" "$FLATPAK_STAGE/dist"
 rm -f "$FLATPAK_STAGE/pingsender" "$FLATPAK_STAGE/crashreporter" "$FLATPAK_STAGE/crashhelper"
+rebrand_omni "$FLATPAK_STAGE/omni.ja"
 mkdir -p "$FLATPAK_STAGE/usr/share/applications" "$FLATPAK_STAGE/usr/share/icons/hicolor/256x256/apps"
 # flatpak installs under /app; keep files at stage root and copy in build
 cp -f "$REPO/chrome/icons/default/default256.png" "$FLATPAK_STAGE/icon.png"
