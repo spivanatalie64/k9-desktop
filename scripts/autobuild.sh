@@ -113,7 +113,7 @@ git lfs install >/dev/null 2>&1 || true
 git add -A
 git commit -m "Autobuild K9Desktop ${VER} based on Thunderbird ESR ${ESR}" || echo "No changes to commit"
 git tag -a "v${VER}" -m "K9Desktop ${VER} release based on Mozilla Thunderbird LTS ${ESR}"
-git push origin main
-git push origin "v${VER}"
+git push origin main || echo "push to main blocked; continuing with release"
+git push origin "v${VER}" || echo "tag push blocked; continuing with release"
 
 echo "Released v${VER}"
