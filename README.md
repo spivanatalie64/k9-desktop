@@ -25,11 +25,25 @@ The `K9Desktop Autobuild` workflow runs weekly (or on manual dispatch) in an `ar
 5. Run `scripts/validate-packages.sh` to verify metadata and desktop integration.
 6. Create or update the GitHub release for that version and upload all artifacts.
 
+## Rebranding
+
+Full rebrand from Thunderbird to K9Desktop is applied at every autobuild:
+
+- `application.ini` / `platform.ini` branded to `Vendor=AcreetionOS`, `Name=K9Desktop`, `Profile=k9`.
+- Icons replaced (`chrome/icons/default/default*.png`, `icons/updater.png`, `TB-symbolic.svg`) with the AcreetionOS logo.
+- `omni.ja` branding patched: `brand.properties`, `brand.ftl`, `thunderbird-branding.js`, and `chrome/messenger/content/branding/*` logos, so UI shows K9Desktop everywhere.
+- Start page, vendor URL, and in-app notifications pointed to `https://acreetionos.org/` and release notes to GitHub.
+
+## Authentication
+
+OAuth no longer uses an external system browser (“neo”/third-party flow). K9Desktop forces the built-in Firefox/Gecko browser for authentication:
+
+- `defaults/pref/k9-branding.js` sets `mailnews.oauth.useExternalBrowser = false`.
+- `omni.ja: modules/OAuth2Providers.sys.mjs` is patched so all built-in providers (Google, Microsoft, Yahoo, etc.) use the internal `browserRequest.xhtml` window instead of `http://localhost` external loopback.
+
 ## Packaging
 
-Each package installs the application under `/opt/k9-desktop` (deb/rpm) or the system root (Arch) and adds:
-- `/usr/bin/k9` launcher symlink
-- `.desktop` entry and icons under `/usr/share`
+Each package installs the application under `/opt/k9-desktop` and adds:
 
 ## Privacy
 
