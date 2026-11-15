@@ -24,10 +24,10 @@ StartupNotify=true
 
 # --- Arch Linux package (.pkg.tar.zst) ---
 ARCHSTAGE="$WORK/arch"
-mkdir -p "$ARCHSTAGE"
-cp -a "$REPO"/. "$ARCHSTAGE/"
-rm -rf "$ARCHSTAGE/.git" "$ARCHSTAGE/.github" "$ARCHSTAGE/scripts" "$ARCHSTAGE/dist"
-rm -f "$ARCHSTAGE/pingsender" "$ARCHSTAGE/crashreporter" "$ARCHSTAGE/crashhelper"
+mkdir -p "$ARCHSTAGE/opt/k9-desktop"
+cp -a "$REPO"/. "$ARCHSTAGE/opt/k9-desktop/"
+rm -rf "$ARCHSTAGE/opt/k9-desktop/.git" "$ARCHSTAGE/opt/k9-desktop/.github" "$ARCHSTAGE/opt/k9-desktop/scripts" "$ARCHSTAGE/opt/k9-desktop/dist"
+rm -f "$ARCHSTAGE/opt/k9-desktop/pingsender" "$ARCHSTAGE/opt/k9-desktop/crashreporter" "$ARCHSTAGE/opt/k9-desktop/crashhelper"
 
 ARCH_SIZE="$(find "$ARCHSTAGE" -type f ! -name .PKGINFO ! -name .BUILDINFO ! -name .MTREE -printf '%s\n' | awk '{s+=$1} END {print s+0}')"
 
@@ -59,7 +59,7 @@ mkdir -p "$ARCHSTAGE/usr/bin" \
          "$ARCHSTAGE/usr/share/applications" \
          "$ARCHSTAGE/usr/share/icons/hicolor/256x256/apps" \
          "$ARCHSTAGE/usr/share/icons/hicolor/scalable/apps"
-ln -sfn '../../k9' "$ARCHSTAGE/usr/bin/k9"
+ln -sfn '../../opt/k9-desktop/k9' "$ARCHSTAGE/usr/bin/k9"
 cp -f "$REPO/chrome/icons/default/default256.png" "$ARCHSTAGE/usr/share/icons/hicolor/256x256/apps/k9-desktop.png"
 cp -f "$REPO/chrome/icons/default/TB-symbolic.svg" "$ARCHSTAGE/usr/share/icons/hicolor/scalable/apps/k9-desktop.svg"
 printf '%s\n' "$DESKTOP_FILE" > "$ARCHSTAGE/usr/share/applications/k9-desktop.desktop"

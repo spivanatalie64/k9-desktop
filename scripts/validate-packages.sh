@@ -26,8 +26,10 @@ for f in "$DIST"/*.pkg.tar.zst; do
   check sh -c "bsdtar -xOf '$f' .MTREE | gzip -t"
   bsdtar -tf "$f" > "$TMP/arch.list"
   check grep -qx 'usr/bin/k9' "$TMP/arch.list"
-  check grep -qx 'defaults/pref/k9-privacy.js' "$TMP/arch.list"
-  check sh -c "! grep -qx 'pingsender' '$TMP/arch.list'"
+  check grep -qx 'opt/k9-desktop/defaults/pref/k9-privacy.js' "$TMP/arch.list"
+  check grep -qx 'opt/k9-desktop/application.ini' "$TMP/arch.list"
+  check sh -c "! grep -qx 'opt/k9-desktop/pingsender' '$TMP/arch.list'"
+  check sh -c "! grep -qx 'opt/k9-desktop/crashreporter' '$TMP/arch.list'"
 done
 
 # --- Debian packages ---
