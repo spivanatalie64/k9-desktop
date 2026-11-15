@@ -16,7 +16,7 @@ K-9 Mail was an independent, privacy-focused Android email client. Mozilla acqui
 
 ## Automation
 
-The `K9Desktop Autobuild` workflow runs weekly (or on manual dispatch) in an `archlinux:latest` container:
+The `K9Desktop Autobuild` workflow runs daily (or on manual dispatch) in an `archlinux:latest` container — it checks `THUNDERBIRD_ESR` and builds as soon as a new LTS is published (major LTS releases are picked up within 24h):
 
 1. Install build dependencies (`git`, `git-lfs`, `dpkg`, `rpm-tools`, etc.).
 2. Clone the repository and pull LFS objects.
@@ -62,3 +62,14 @@ This project is an **automated autobuild** of Mozilla Thunderbird LTS. Builds ar
 
 - Found a bug? **Open an issue** on this repository.
 - Need help sooner? Come talk to us on Discord: https://discord.acreetionos.org :D
+
+## Flatpak
+
+Flatpak is published via **[FlatFree](https://github.com/spivanatalie64/FlatFree)** — not as a bundle in this repo's releases:
+
+```bash
+flatpak remote-add --if-not-exists flatfree https://natalie.acreetionos.org/FlatFree/flatfree.flatpakrepo
+flatpak install flatfree org.acreetionos.K9Desktop
+```
+
+The autobuild syncs `org.acreetionos.K9Desktop` in FlatFree to each new `v*` tag after release (requires `FLATFREE_PAT` for auto-push; otherwise the manifest is bumped manually).
