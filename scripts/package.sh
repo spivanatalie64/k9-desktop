@@ -178,4 +178,134 @@ else
   echo "rpmbuild not available; skipping rpm"
 fi
 
+# --- Snap package (.snap) ---
+SNAP="$WORK/k9-desktop_${VER}_snap"
+rm -rf "$SNAP"
+mkdir -p "$SNAP/meta/gui"
+cp -a "$REPO"/. "$SNAP/"
+rm -rf "$SNAP/.git" "$SNAP/.github" "$SNAP/scripts" "$SNAP/dist"
+rm -f "$SNAP/pingsender" "$SNAP/crashreporter" "$SNAP/crashhelper"
+mkdir -p "$SNAP/meta/gui"
+cp -f "$REPO/chrome/icons/default/default256.png" "$SNAP/meta/gui/icon.png"
+cat > "$SNAP/meta/gui/k9-desktop.desktop" <<EOF
+[Desktop Entry]
+Name=K9Desktop
+Comment=K9Desktop mail client based on Mozilla Thunderbird LTS
+Exec=k9
+Type=Application
+Icon=k9-desktop
+Terminal=false
+Categories=Network;Email;
+EOF
+cat > "$SNAP/meta/snap.yaml" <<EOF
+name: k9-desktop
+version: "${VER}"
+summary: K9Desktop mail client
+description: Privacy-first mail client based on Mozilla Thunderbird LTS.
+grade: stable
+confinement: strict
+base: core22
+architectures:
+  - build-on: amd64
+    run-on: amd64
+apps:
+  k9-desktop:
+    command: k9
+    desktop: meta/gui/k9-desktop.desktop
+    plugs: [home, network, desktop, desktop-legacy, wayland, x11]
+EOF
+if command -v mksquashfs >/dev/null 2>&1; then
+  mksquashfs "$SNAP" "$DIST/k9-desktop_${VER}_amd64.snap" -noappend -comp xz -quiet
+  echo "Created snap"
+else
+  echo "mksquashfs not available; skipping snap"
+fi
+
+# --- AppImage (.AppImage) ---
+APPDIR="$WORK/K9Desktop.AppDir"
+rm -rf "$APPDIR"
+mkdir -p "$APPDIR/usr/lib/k9-desktop" "$APPDIR/usr/bin" \
+         "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+cp -a "$REPO"/. "$APPDIR/usr/lib/k9-desktop/"
+rm -rf "$APPDIR/usr/lib/k9-desktop/.git" "$APPDIR/usr/lib/k9-desktop/.github" \
+       "$APPDIR/usr/lib/k9-desktop/scripts" "$APPDIR/usr/lib/k9-desktop/dist"
+rm -f "$APPDIR/usr/lib/k9-desktop/pingsender" "$APPDIR/usr/lib/k9-desktop/crashreporter" \
+      "$APPDIR/usr/lib/k9-desktop/crashhelper"
+ln -sfn ../lib/k9-desktop/k9 "$APPDIR/usr/bin/k9"
+cp -f "$REPO/chrome/icons/default/default256.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/k9-desktop.png"
+cp -f "$REPO/chrome/icons/default/TB-symbolic.svg" "$APPDIR/usr/share/icons/hicolor/scalable/apps/k9-desktop.svg" 2>/dev/null || true
+mkdir -p "$APPDIR/usr/share/icons/hicolor/scalable/apps"
+cp -f "$REPO/chrome/icons/default/TB-symbolic.svg" "$APPDIR/usr/share/icons/hicolor/scalable/apps/k9-desktop.svg"
+cat > "$APPDIR/usr/share/applications/k9-desktop.desktop" <<EOF
+$DESKTOP_FILE
+EOF
+cp "$APPDIR/usr/share/applications/k9-desktop.desktop" "$APPDIR/k9-desktop.desktop"
+cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/k9-desktop.png" "$APPDIR/k9-desktop.png"
+ln -sfn usr/bin/k9 "$APPDIR/AppRun"
+if ! command -v appimagetool >/dev/null 2>&1; then
+  if curl -fsSL -o "$WORK/appimagetool" \
+      "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" 2>/dev/null; then
+    chmod +x "$WORK/appimagetool"
+    APPIMAGETOOL="$WORK/appimagetool"
+  else
+    APPIMAGETOOL=""
+  fi
+else
+  APPIMAGETOOL="appimagetool"
+fi
+if [ -n "$APPIMAGETOOL" ]; then
+  ( cd "$WORK" && APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGETOOL" "$APPDIR" \
+      "$DIST/K9Desktop-${VER}-x86_64.AppImage" ) && echo "Created AppImage" || echo "AppImage build failed; skipping"
+else
+  echo "appimagetool not available; skipping AppImage"
+fi
+
+# --- Flatpak (.flatpak) ---
+FLATPAK_STAGE="$WORK/flatpak-stage"
+rm -rf "$FLATPAK_STAGE"
+mkdir -p "$FLATPAK_STAGE"
+cp -a "$REPO"/. "$FLATPAK_STAGE/"
+rm -rf "$FLATPAK_STAGE/.git" "$FLATPAK_STAGE/.github" "$FLATPAK_STAGE/scripts" "$FLATPAK_STAGE/dist"
+rm -f "$FLATPAK_STAGE/pingsender" "$FLATPAK_STAGE/crashreporter" "$FLATPAK_STAGE/crashhelper"
+mkdir -p "$FLATPAK_STAGE/usr/share/applications" "$FLATPAK_STAGE/usr/share/icons/hicolor/256x256/apps"
+# flatpak installs under /app; keep files at stage root and copy in build
+cp -f "$REPO/chrome/icons/default/default256.png" "$FLATPAK_STAGE/icon.png"
+cat > "$FLATPAK_STAGE/k9-desktop.desktop" <<EOF
+$DESKTOP_FILE
+EOF
+cat > "$WORK/org.acreetionos.K9Desktop.yml" <<EOF
+app-id: org.acreetionos.K9Desktop
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: k9
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+modules:
+  - name: k9-desktop
+    buildsystem: simple
+    build-commands:
+      - install -d /app/lib/k9-desktop
+      - cp -a . /app/lib/k9-desktop/
+      - ln -sf /app/lib/k9-desktop/k9 /app/bin/k9
+      - install -Dm644 k9-desktop.desktop /app/share/applications/org.acreetionos.K9Desktop.desktop
+      - install -Dm644 icon.png /app/share/icons/hicolor/256x256/apps/org.acreetionos.K9Desktop.png
+    sources:
+      - type: dir
+        path: $FLATPAK_STAGE
+EOF
+if command -v flatpak-builder >/dev/null 2>&1; then
+  if flatpak-builder --force-clean --repo="$WORK/flatpak-repo" "$WORK/flatpak-build" "$WORK/org.acreetionos.K9Desktop.yml" >/tmp/opencode/flatpak.log 2>&1; then
+    flatpak build-bundle "$WORK/flatpak-repo" "$DIST/k9-desktop_${VER}_x86_64.flatpak" org.acreetionos.K9Desktop && echo "Created flatpak" || echo "flatpak bundle failed; skipping"
+  else
+    echo "flatpak-builder failed; skipping flatpak (see /tmp/opencode/flatpak.log)"
+  fi
+else
+  echo "flatpak-builder not available; skipping flatpak"
+fi
+
 ls -lh "$DIST"

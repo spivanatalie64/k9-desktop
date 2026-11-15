@@ -49,6 +49,8 @@ jobs:
         run: |
           chmod +x scripts/validate-packages.sh
           ./scripts/validate-packages.sh dist
+
+      - name: Create GitHub release with artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -58,7 +60,7 @@ jobs:
           if gh release view "v${VER}" >/dev/null 2>&1; then
             echo "Release already exists; uploading assets"
           else
-            gh release create "v${VER}" --title "K9Desktop ${VER}" --notes "Autobuild based on Mozilla Thunderbird LTS ${ESR}. Packaged as deb, rpm, and Arch tarball."
+            gh release create "v${VER}" --title "K9Desktop ${VER}" --notes "Autobuild based on Mozilla Thunderbird LTS ${ESR}. Packaged as deb, rpm, and Arch tarball. De-telemetered build."
           fi
           for f in dist/*; do
             [ -e "$f" ] && gh release upload "v${VER}" "$f" --clobber
