@@ -2,7 +2,7 @@ name: K9Desktop Autobuild
 
 on:
   schedule:
-    - cron: "0 0 * * 0"   # weekly, free GitHub Actions tier
+    - cron: "0 0 * * *"   # daily — tracks Thunderbird LTS; autobuild skips if tag exists, major releases are picked up within 24h
   workflow_dispatch:
 
 permissions:
@@ -65,8 +65,54 @@ jobs:
           if gh release view "v${VER}" >/dev/null 2>&1; then
             echo "Release already exists; uploading assets"
           else
-            gh release create "v${VER}" --title "K9Desktop ${VER}" --notes "Autobuild based on Mozilla Thunderbird LTS ${ESR}. Packaged as deb, rpm, Arch, AppImage, snap, and flatpak. De-telemetered build."
+            gh release create "v${VER}" --title "K9Desktop ${VER}" --notes "Autobuild based on Mozilla Thunderbird LTS ${ESR}. Packaged as deb, rpm, Arch, AppImage, snap. Flatpak via FlatFree. De-telemetered build."
           fi
           for f in dist/*; do
+            # Flatpak now lives in FlatFree (https://github.com/spivanatalie64/FlatFree) — don't upload flatpak bundle here
+            case "$f" in *.flatpak) continue;; esac
             [ -e "$f" ] && gh release upload "v${VER}" "$f" --clobber
           done
+
+      - name: Sync FlatFree (Flatpak)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FLATFREE_PAT: ${{ secrets.FLATFREE_PAT }}
+        run: |
+          ESR=$(curl -s https://product-details.mozilla.org/1.0/thunderbird_versions.json | python3 -c "import sys,json; print(json.load(sys.stdin)['THUNDERBIRD_ESR'])")
+          VER="${ESR%esr}"
+          TAG="v${VER}"
+          COMMIT=$(git rev-parse "$TAG" 2>/dev/null || git rev-parse HEAD)
+          echo "Syncing FlatFree to $TAG ($COMMIT)"
+          TOKEN="${FLATFREE_PAT:-$GH_TOKEN}"
+          # Try to update FlatFree manifest if we have push access
+          TMP=$(mktemp -d)
+          if git clone "https://x-access-token:${TOKEN}@github.com/spivanatalie64/FlatFree.git" "$TMP/FlatFree" 2>/dev/null; then
+            MANIFEST="$TMP/FlatFree/org.acreetionos.K9Desktop/org.acreetionos.K9Desktop.json"
+            if [ -f "$MANIFEST" ]; then
+              python3 - <<PY
+          import json, pathlib
+          p = pathlib.Path("$MANIFEST")
+          d = json.loads(p.read_text())
+          for m in d.get("modules", []):
+              for s in m.get("sources", []):
+                  if s.get("url","").endswith("k9-desktop.git"):
+                      s["tag"] = "$TAG"
+                      s["commit"] = "$COMMIT"
+          p.write_text(json.dumps(d, indent=4) + "\n")
+          print("Updated manifest to $TAG")
+          PY
+              git -C "$TMP/FlatFree" config user.name "k9-desktop"
+              git -C "$TMP/FlatFree" config user.email "k9-desktop@acreetionos.org"
+              git -C "$TMP/FlatFree" add "org.acreetionos.K9Desktop/org.acreetionos.K9Desktop.json"
+              if ! git -C "$TMP/FlatFree" diff --cached --quiet; then
+                git -C "$TMP/FlatFree" commit -m "K9Desktop $TAG — sync from k9-desktop autobuild"
+                git -C "$TMP/FlatFree" push origin main || echo "FlatFree push failed (missing PAT?) — manifest updated locally but not pushed"
+              else
+                echo "FlatFree already up to date"
+              fi
+            fi
+          else
+            echo "Could not clone FlatFree (no PAT?) — skipping sync"
+          fi
+          rm -rf "$TMP"
