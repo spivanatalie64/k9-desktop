@@ -9,38 +9,118 @@ mkdir -p "$DIST"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-EXCLUDES=(--exclude=.git --exclude=.github --exclude=scripts --exclude=dist)
+BUILD_DATE="$(date +%s)"
+DESKTOP_FILE='[Desktop Entry]
+Name=K9Desktop
+Comment=K9Desktop mail client based on Mozilla Thunderbird LTS
+Exec=k9 %u
+Type=Application
+Icon=k9-desktop
+Terminal=false
+Categories=Network;Email;
+MimeType=x-scheme-handler/mailto;
+StartupNotify=true
+'
 
 # --- Arch Linux package (.pkg.tar.zst) ---
 ARCHSTAGE="$WORK/arch"
 mkdir -p "$ARCHSTAGE"
 cp -a "$REPO"/. "$ARCHSTAGE/"
 rm -rf "$ARCHSTAGE/.git" "$ARCHSTAGE/.github" "$ARCHSTAGE/scripts" "$ARCHSTAGE/dist"
+rm -f "$ARCHSTAGE/pingsender" "$ARCHSTAGE/crashreporter" "$ARCHSTAGE/crashhelper"
+
+ARCH_SIZE="$(find "$ARCHSTAGE" -type f ! -name .PKGINFO ! -name .BUILDINFO ! -name .MTREE -printf '%s\n' | awk '{s+=$1} END {print s+0}')"
+
 cat > "$ARCHSTAGE/.PKGINFO" <<EOF
+pkgbase = k9-desktop
 pkgname = k9-desktop
 pkgver = ${VER}-1
 pkgdesc = K9Desktop mail client based on Mozilla Thunderbird LTS
+url = https://github.com/spivanatalie64/k9-desktop
+builddate = ${BUILD_DATE}
+packager = AcreetionOS <k9-desktop@acreetionos.org>
+size = ${ARCH_SIZE}
 arch = x86_64
 license = MPL-2.0
 EOF
-tar --zstd -cf "$DIST/k9-desktop-${VER}-x86_64.pkg.tar.zst" -C "$ARCHSTAGE" .
+
+cat > "$ARCHSTAGE/.BUILDINFO" <<EOF
+format = 1
+pkgname = k9-desktop
+pkgbase = k9-desktop
+pkgver = ${VER}-1
+pkgarch = x86_64
+builddate = ${BUILD_DATE}
+packager = AcreetionOS <k9-desktop@acreetionos.org>
+EOF
+
+# desktop integration
+mkdir -p "$ARCHSTAGE/usr/bin" \
+         "$ARCHSTAGE/usr/share/applications" \
+         "$ARCHSTAGE/usr/share/icons/hicolor/256x256/apps" \
+         "$ARCHSTAGE/usr/share/icons/hicolor/scalable/apps"
+ln -sfn '../../k9' "$ARCHSTAGE/usr/bin/k9"
+cp -f "$REPO/chrome/icons/default/default256.png" "$ARCHSTAGE/usr/share/icons/hicolor/256x256/apps/k9-desktop.png"
+cp -f "$REPO/chrome/icons/default/TB-symbolic.svg" "$ARCHSTAGE/usr/share/icons/hicolor/scalable/apps/k9-desktop.svg"
+printf '%s\n' "$DESKTOP_FILE" > "$ARCHSTAGE/usr/share/applications/k9-desktop.desktop"
+
+# libalpm requires the metadata entries (.BUILDINFO/.MTREE/.PKGINFO) to be FIRST
+# in the archive with clean names (no "./" prefix). Mirror the layout produced
+# by makepkg. Note: bsdtar only honors -T as a file list when it appears BEFORE
+# any member operands, so everything goes in one ordered list.
+bsdtar -cPf - --format=mtree --uid 0 --gid 0 --uname root --gname root \
+    --options='!all,use-set,type,link,uid,gid,uname,gname,mode,size,time,sha256digest' \
+    --exclude=.MTREE -C "$ARCHSTAGE" .BUILDINFO .PKGINFO . | gzip -c > "$ARCHSTAGE/.MTREE"
+{
+  printf '%s\n' .BUILDINFO .MTREE .PKGINFO
+  (cd "$ARCHSTAGE" && find . -mindepth 1 -maxdepth 1 \
+      ! -name .BUILDINFO ! -name .MTREE ! -name .PKGINFO \
+      -printf '%P\n' | sort)
+} > "$WORK/pkglist"
+(cd "$ARCHSTAGE" && bsdtar --zstd -cf "$DIST/k9-desktop-${VER}-x86_64.pkg.tar.zst" \
+    --uid 0 --gid 0 --uname root --gname root -T "$WORK/pkglist")
 echo "Created Arch package"
 
 # --- Debian package (.deb) ---
 DEB="$WORK/k9-desktop_${VER}_amd64"
 mkdir -p "$DEB/DEBIAN" "$DEB/opt/k9-desktop"
 cp -a "$REPO"/. "$DEB/opt/k9-desktop/"
-# remove excluded dirs from payload
 rm -rf "$DEB/opt/k9-desktop/.git" "$DEB/opt/k9-desktop/.github" "$DEB/opt/k9-desktop/scripts" "$DEB/opt/k9-desktop/dist"
+rm -f "$DEB/opt/k9-desktop/pingsender" "$DEB/opt/k9-desktop/crashreporter" "$DEB/opt/k9-desktop/crashhelper"
+
+DEB_SIZE_KB=0
+while IFS= read -r -d '' obj; do
+  if [ -L "$obj" ] || [ -f "$obj" ]; then
+    sz=$(stat -c '%s' "$obj" 2>/dev/null || echo 0)
+    DEB_SIZE_KB=$((DEB_SIZE_KB + (sz + 1023) / 1024))
+  else
+    DEB_SIZE_KB=$((DEB_SIZE_KB + 1))
+  fi
+done < <(find "$DEB" -path "$DEB/DEBIAN" -prune -o -mindepth 1 -print0)
+# ensure at least 1 KiB baseline
+[ "$DEB_SIZE_KB" -gt 0 ] || DEB_SIZE_KB=1
+
 cat > "$DEB/DEBIAN/control" <<EOF
 Package: k9-desktop
 Version: ${VER}
 Section: mail
 Priority: optional
 Architecture: amd64
+Installed-Size: ${DEB_SIZE_KB}
 Maintainer: AcreetionOS <k9-desktop@acreetionos.org>
 Description: K9Desktop mail client based on Mozilla Thunderbird LTS
 EOF
+
+# desktop integration
+mkdir -p "$DEB/usr/bin" \
+         "$DEB/usr/share/applications" \
+         "$DEB/usr/share/icons/hicolor/256x256/apps" \
+         "$DEB/usr/share/icons/hicolor/scalable/apps"
+ln -sfn '../../opt/k9-desktop/k9' "$DEB/usr/bin/k9"
+cp -f "$REPO/chrome/icons/default/default256.png" "$DEB/usr/share/icons/hicolor/256x256/apps/k9-desktop.png"
+cp -f "$REPO/chrome/icons/default/TB-symbolic.svg" "$DEB/usr/share/icons/hicolor/scalable/apps/k9-desktop.svg"
+printf '%s\n' "$DESKTOP_FILE" > "$DEB/usr/share/applications/k9-desktop.desktop"
+
 dpkg-deb --build "$DEB" "$DIST/k9-desktop_${VER}_amd64.deb"
 echo "Created deb"
 
@@ -51,6 +131,7 @@ if command -v rpmbuild >/dev/null 2>&1; then
   mkdir -p "$WORK/k9-desktop-${VER}"
   cp -a "$REPO"/. "$WORK/k9-desktop-${VER}/"
   rm -rf "$WORK/k9-desktop-${VER}/.git" "$WORK/k9-desktop-${VER}/.github" "$WORK/k9-desktop-${VER}/scripts" "$WORK/k9-desktop-${VER}/dist"
+  rm -f "$WORK/k9-desktop-${VER}/pingsender" "$WORK/k9-desktop-${VER}/crashreporter" "$WORK/k9-desktop-${VER}/crashhelper"
   tar -czf "$RPMBUILD/SOURCES/k9-desktop-${VER}.tar.gz" -C "$WORK" "k9-desktop-${VER}"
   cat > "$RPMBUILD/SPECS/k9-desktop.spec" <<EOF
 Name: k9-desktop
@@ -71,9 +152,20 @@ K9Desktop mail client based on Mozilla Thunderbird LTS.
 %install
 mkdir -p %{buildroot}/opt/k9-desktop
 cp -a . %{buildroot}/opt/k9-desktop/
+mkdir -p %{buildroot}/usr/bin %{buildroot}/usr/share/applications %{buildroot}/usr/share/icons/hicolor/256x256/apps %{buildroot}/usr/share/icons/hicolor/scalable/apps
+ln -s ../../opt/k9-desktop/k9 %{buildroot}/usr/bin/k9
+cp chrome/icons/default/default256.png %{buildroot}/usr/share/icons/hicolor/256x256/apps/k9-desktop.png
+cp chrome/icons/default/TB-symbolic.svg %{buildroot}/usr/share/icons/hicolor/scalable/apps/k9-desktop.svg
+cat > %{buildroot}/usr/share/applications/k9-desktop.desktop <<'DESKTOP'
+${DESKTOP_FILE}
+DESKTOP
 
 %files
 /opt/k9-desktop
+/usr/bin/k9
+/usr/share/applications/k9-desktop.desktop
+/usr/share/icons/hicolor/256x256/apps/k9-desktop.png
+/usr/share/icons/hicolor/scalable/apps/k9-desktop.svg
 
 %changelog
 * $(date '+%a %b %d %Y') AcreetionOS <k9-desktop@acreetionos.org> - ${VER}-1

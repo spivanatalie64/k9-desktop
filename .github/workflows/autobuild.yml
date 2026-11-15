@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           pacman -Sy --noconfirm
-          pacman -S --noconfirm --needed git git-lfs curl python rsync tar xz zstd binutils dpkg rpm
+          pacman -S --noconfirm --needed git git-lfs curl python rsync tar xz zstd binutils dpkg rpm rpm-tools
 
       - name: Checkout (no Node-based actions)
         env:
@@ -43,7 +43,12 @@ jobs:
           chmod +x scripts/package.sh
           ./scripts/package.sh
 
-      - name: Create GitHub release with artifacts
+      - name: Validate packages
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        run: |
+          chmod +x scripts/validate-packages.sh
+          ./scripts/validate-packages.sh dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
