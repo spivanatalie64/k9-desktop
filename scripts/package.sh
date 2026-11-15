@@ -27,6 +27,7 @@ ARCHSTAGE="$WORK/arch"
 mkdir -p "$ARCHSTAGE"
 cp -a "$REPO"/. "$ARCHSTAGE/"
 rm -rf "$ARCHSTAGE/.git" "$ARCHSTAGE/.github" "$ARCHSTAGE/scripts" "$ARCHSTAGE/dist"
+rm -f "$ARCHSTAGE/pingsender" "$ARCHSTAGE/crashreporter" "$ARCHSTAGE/crashhelper"
 
 ARCH_SIZE="$(find "$ARCHSTAGE" -type f ! -name .PKGINFO ! -name .BUILDINFO ! -name .MTREE -printf '%s\n' | awk '{s+=$1} END {print s+0}')"
 
@@ -82,6 +83,7 @@ DEB="$WORK/k9-desktop_${VER}_amd64"
 mkdir -p "$DEB/DEBIAN" "$DEB/opt/k9-desktop"
 cp -a "$REPO"/. "$DEB/opt/k9-desktop/"
 rm -rf "$DEB/opt/k9-desktop/.git" "$DEB/opt/k9-desktop/.github" "$DEB/opt/k9-desktop/scripts" "$DEB/opt/k9-desktop/dist"
+rm -f "$DEB/opt/k9-desktop/pingsender" "$DEB/opt/k9-desktop/crashreporter" "$DEB/opt/k9-desktop/crashhelper"
 
 DEB_SIZE="$(find "$DEB/opt/k9-desktop" -type f -printf '%s\n' | awk '{s+=$1} END {print s+0}')"
 DEB_SIZE_KB="$(( (DEB_SIZE + 1023) / 1024 ))"
@@ -117,6 +119,7 @@ if command -v rpmbuild >/dev/null 2>&1; then
   mkdir -p "$WORK/k9-desktop-${VER}"
   cp -a "$REPO"/. "$WORK/k9-desktop-${VER}/"
   rm -rf "$WORK/k9-desktop-${VER}/.git" "$WORK/k9-desktop-${VER}/.github" "$WORK/k9-desktop-${VER}/scripts" "$WORK/k9-desktop-${VER}/dist"
+  rm -f "$WORK/k9-desktop-${VER}/pingsender" "$WORK/k9-desktop-${VER}/crashreporter" "$WORK/k9-desktop-${VER}/crashhelper"
   tar -czf "$RPMBUILD/SOURCES/k9-desktop-${VER}.tar.gz" -C "$WORK" "k9-desktop-${VER}"
   cat > "$RPMBUILD/SPECS/k9-desktop.spec" <<EOF
 Name: k9-desktop
