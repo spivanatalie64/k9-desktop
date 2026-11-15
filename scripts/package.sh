@@ -65,7 +65,7 @@ BRANDJS
     sed -i 's/useExternalBrowser: true/useExternalBrowser: false/g' "$tmp/modules/OAuth2Providers.sys.mjs" || true
   fi
   local out
-  out="$(mktemp)"
+  out="$(mktemp -u).ja"
   (cd "$tmp" && zip -qr -0 "$out" .)
   cat "$out" > "$omni"
   rm -rf "$tmp" "$out"
