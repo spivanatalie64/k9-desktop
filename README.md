@@ -42,3 +42,9 @@ git lfs pull
 ```
 
 Requires `bsdtar`, `dpkg-deb`, and `rpmbuild` (Arch: `dpkg`, `rpm-tools`).
+## Disclaimer and support
+
+This project is an **automated autobuild** of Mozilla Thunderbird LTS. Builds are produced weekly by CI and may occasionally lag upstream or carry packaging rough edges.
+
+- Found a bug? **Open an issue** on this repository.
+- Need help sooner? Come talk to us on Discord: https://discord.acreetionos.org :D
