@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           pacman -Sy --noconfirm
-          pacman -S --noconfirm --needed git git-lfs curl python rsync tar xz zstd binutils dpkg rpm rpm-tools
+          pacman -S --noconfirm --needed git git-lfs curl python rsync tar xz zstd binutils dpkg rpm rpm-tools squashfs-tools flatpak flatpak-builder
 
       - name: Checkout (no Node-based actions)
         env:
@@ -29,7 +29,10 @@ jobs:
           git lfs install
           git lfs pull
 
-      - name: Run autobuild
+      - name: Install Flatpak runtime
+        run: |
+          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
